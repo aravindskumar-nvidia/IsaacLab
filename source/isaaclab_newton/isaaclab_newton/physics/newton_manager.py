@@ -845,11 +845,16 @@ class NewtonManager(PhysicsManager):
             # Build a prototype from the first env (all envs assumed identical)
             _, proto_path = env_paths[0]
             proto = ModelBuilder(up_axis=up_axis)
+            SolverMuJoCo.register_custom_attributes(proto)
             proto.add_usd(
                 stage,
                 root_path=proto_path,
                 schema_resolvers=schema_resolvers,
             )
+
+            from isaaclab_newton.cloner.newton_replicate import _apply_gravity_compensation
+
+            _apply_gravity_compensation(proto, stage)
 
             # Inject registered sites into the proto before replication
             global_sites, proto_sites = cls._cl_inject_sites(builder, {proto_path: proto})

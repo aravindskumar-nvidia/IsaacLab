@@ -10,6 +10,7 @@ from collections.abc import Callable
 import torch
 import warp as wp
 from newton import ModelBuilder, solvers
+from newton._src.usd import utils as newton_usd_utils
 from newton._src.usd.schemas import SchemaResolverNewton, SchemaResolverPhysx
 
 from pxr import Usd, UsdGeom
@@ -17,6 +18,46 @@ from pxr import Usd, UsdGeom
 from isaaclab.physics.scene_data_requirements import VisualizerPrebuiltArtifacts
 
 from isaaclab_newton.physics import NewtonManager
+
+
+def _apply_gravity_compensation(builder: ModelBuilder, stage: Usd.Stage) -> None:
+    """Set MuJoCo gravity compensation on bodies with ``physxRigidBody:disableGravity``.
+
+    For each body in the prototype builder, checks the corresponding USD prim for
+    the ``physxRigidBody:disableGravity`` attribute. If ``True``, sets
+    ``mujoco:gravcomp = 1.0`` on that body and ``mujoco:jnt_actgravcomp = True``
+    on all joint DOFs.
+
+    Args:
+        builder: Prototype model builder with MuJoCo custom attributes registered.
+        stage: USD stage used to look up prim attributes.
+    """
+    body_labels = builder.body_label
+    if not body_labels:
+        return
+
+    gravcomp_body = builder.custom_attributes.get("mujoco:gravcomp")
+    gravcomp_dof = builder.custom_attributes.get("mujoco:jnt_actgravcomp")
+    if gravcomp_body is None or gravcomp_dof is None:
+        return
+
+    any_disabled = False
+    for body_idx, body_path in enumerate(body_labels):
+        prim = stage.GetPrimAtPath(body_path)
+        if not prim.IsValid():
+            continue
+        disable_gravity = newton_usd_utils.get_attribute(prim, "physxRigidBody:disableGravity", False)
+        if disable_gravity:
+            if gravcomp_body.values is None:
+                gravcomp_body.values = {}
+            gravcomp_body.values[body_idx] = 1.0
+            any_disabled = True
+
+    if any_disabled:
+        if gravcomp_dof.values is None:
+            gravcomp_dof.values = {}
+        for dof_idx in range(builder.joint_dof_count):
+            gravcomp_dof.values[dof_idx] = True
 
 
 def _build_newton_builder_from_mapping(
@@ -77,6 +118,7 @@ def _build_newton_builder_from_mapping(
         )
         if simplify_meshes:
             p.approximate_meshes("convex_hull", keep_visual_shapes=True)
+        _apply_gravity_compensation(p, stage)
         protos[src_path] = p
 
     # Inject registered sites into prototypes (and global sites into main builder)
