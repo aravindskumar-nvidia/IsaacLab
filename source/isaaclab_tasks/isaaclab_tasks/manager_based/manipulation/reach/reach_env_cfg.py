@@ -46,7 +46,7 @@ class ReachPhysicsCfg(PresetCfg):
             integrator="implicitfast",
             impratio=1,
         ),
-        num_substeps=1,
+        num_substeps=16,
         debug_mode=False,
     )
 
