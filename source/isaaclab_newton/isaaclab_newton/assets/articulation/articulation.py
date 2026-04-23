@@ -17,7 +17,6 @@ import numpy as np
 import torch
 import warp as wp
 from newton import JointType
-from newton.selection import ArticulationView
 from newton.solvers import SolverNotifyFlags
 from prettytable import PrettyTable
 
@@ -37,6 +36,7 @@ from isaaclab_newton.assets.articulation import kernels as articulation_kernels
 from isaaclab_newton.physics import NewtonManager as SimulationManager
 
 from .articulation_data import ArticulationData
+from .articulation_view_adapter import ArticulationView
 
 if TYPE_CHECKING:
     from isaaclab.assets.articulation.articulation_cfg import ArticulationCfg

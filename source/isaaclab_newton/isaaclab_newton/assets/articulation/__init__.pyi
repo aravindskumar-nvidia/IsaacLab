@@ -6,7 +6,9 @@
 __all__ = [
     "Articulation",
     "ArticulationData",
+    "ArticulationView",
 ]
 
 from .articulation import Articulation
 from .articulation_data import ArticulationData
+from .articulation_view_adapter import ArticulationView
